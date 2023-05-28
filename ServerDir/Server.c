@@ -7,7 +7,7 @@
 #define PORT 8080
 #define FILENAME_LENGTH 100
 
-void saveFile(int file_no, int socket) {
+void saveFile(int file_no, long file_size, int socket) {
     printf("Saving file #%d start.\n", file_no);
     char file_name[FILENAME_LENGTH];
     sprintf(file_name, "received_%d.csv", file_no);
@@ -20,11 +20,18 @@ void saveFile(int file_no, int socket) {
 
     char buffer[1024];
     int bytesRead = 0;
+    long bytesReadTotal = 0;
     while ((bytesRead = recv(socket, buffer, sizeof(buffer), 0)) > 0) {
         if (bytesRead < 0) {
             perror("Receiving error");
         }
         fwrite(buffer, sizeof(char), bytesRead, file);
+        memset(buffer, 0, sizeof(buffer));
+        bytesReadTotal += bytesRead;
+        printf("%ld\n", bytesReadTotal);
+        if (bytesReadTotal >= file_size) {
+            break;
+        }
     }
 
     fclose(file);
@@ -64,8 +71,9 @@ int main() {
     }
 
     addrSize = sizeof(newAddr);
+    int fileReceived = 0;  // Variable to track the number of files received
 
-    while (1) {
+    while (fileReceived < 1) {  // Exit the loop when one file is received
         // Accept connection from client
         newSocket = accept(serverSocket, (struct sockaddr*)&newAddr, &addrSize);
         if (newSocket < 0) {
@@ -81,15 +89,24 @@ int main() {
             exit(1);
         }
         printf("Received ID: %s\n", id);
-
-        int file_no;
-        if (recv(newSocket, &file_no, sizeof(file_no), 0) < 0) {
-            perror("Receiving error");
-            exit(1);
+        while (1) {
+            // Receive File Name from client
+            int file_no;
+            if (recv(newSocket, &file_no, sizeof(file_no), 0) < 0) {
+                perror("Receiving error");
+                exit(1);
+            }
+            printf("File #%d received.\n", file_no);
+            // Receive File Size from client
+            long file_size;
+            if (recv(newSocket, &file_size, sizeof(file_size), 0) < 0) {
+                perror("Receiving error");
+                exit(1);
+            }
+            printf("File Size : %ld\n", file_size);
+            // Receive file from client
+            saveFile(file_no, file_size, newSocket);
         }
-        printf("File #%d received.\n", file_no);
-        // Receive file from client
-        saveFile(file_no, newSocket);
 
         close(newSocket);
     }

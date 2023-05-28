@@ -8,6 +8,20 @@
 #define INTERVAL 5  // in seconds
 #define FILENAME_LENGTH 100
 
+long calculateFileSize(const char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (file == NULL) {
+        perror("File error");
+        return -1;
+    }
+
+    fseek(file, 0, SEEK_END);  // Move the file pointer to the end of the file
+    long size = ftell(file);   // Get the current position of the file pointer (which is the file size)
+    fclose(file);
+
+    return size;
+}
+
 void sendFile(int file_no, int socket) {
     char file_name[FILENAME_LENGTH];
     sprintf(file_name, "%d.csv", file_no);
@@ -42,6 +56,13 @@ void sendFile(int file_no, int socket) {
         perror("File error");
         exit(1);
     }
+
+    long fileSize = calculateFileSize(file_name);
+    if (send(socket, &fileSize, sizeof(fileSize), 0) < 0) {
+        perror("Sending error");
+        exit(1);
+    }
+    printf("File Sent (%ld)\n", fileSize);
 
     char buffer[1024];
     int bytesRead = 0;
@@ -101,7 +122,9 @@ int main() {
         }
         printf("Sending File #%d...\n", file_no);
         sendFile(file_no++, clientSocket);
+
         printf("File #%d Sent.\n", file_no);
+
         sleep(INTERVAL);
     }
 
