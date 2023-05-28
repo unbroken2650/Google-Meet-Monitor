@@ -1,15 +1,27 @@
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 
 #define PORT 8080
-#define FILENAME "data.csv"
-#define INTERVAL 5 // in seconds
+#define INTERVAL 5  // in seconds
 
-void sendFile(int socket) {
-    FILE* file = fopen(FILENAME, "rb");
+void sendFile(int file_no, int socket) {
+    char file_str[15];
+    sprintf(file_str, "%d", file_no);
+    char file_name[100];
+    strcpy(file_name, file_str);
+    strcat(file_name, ".csv");
+
+    char command[100];
+    sprintf(command, "touch %s", file_name);
+    system(command);
+    
+    //Packet Capture
+
+    FILE* file = fopen(file_name, "rb");
+
     if (file == NULL) {
         perror("File error");
         exit(1);
@@ -54,17 +66,19 @@ int main() {
     }
 
     // Send ID to server
-    int id = 123; // Replace with desired ID
-    if (send(clientSocket, &id, sizeof(int), 0) < 0) {
+    char id[15] = "";  // Replace with desired ID
+    printf("Enter Meet ID: ");
+    scanf("%s", id);
+    if (send(clientSocket, &id, sizeof(id), 0) < 0) {
         perror("Sending error");
         exit(1);
     }
-    printf("Sent ID: %d\n", id);
+    printf("Sent ID: %s\n", id);
 
+    int file_no = 1;
     while (1) {
         // Send file to server
-        sendFile(clientSocket);
-
+        sendFile(file_no++, clientSocket);
         sleep(INTERVAL);
     }
 
