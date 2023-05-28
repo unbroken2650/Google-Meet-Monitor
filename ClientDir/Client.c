@@ -5,16 +5,14 @@
 #include <unistd.h>
 
 #define PORT 8080
-#define INTERVAL 10  // in seconds
+#define INTERVAL 5  // in seconds
+#define FILENAME_LENGTH 100
 
 void sendFile(int file_no, int socket) {
-    char file_str[15];
-    sprintf(file_str, "%d", file_no);
-    char file_name[100];
-    strcpy(file_name, file_str);
-    strcat(file_name, ".csv");
+    char file_name[FILENAME_LENGTH];
+    sprintf(file_name, "%d.csv", file_no);
 
-    char command[100];
+    char command[100] = "";
     sprintf(command, "touch %s", file_name);
     system(command);
 
@@ -23,18 +21,18 @@ void sendFile(int file_no, int socket) {
 
     system("touch output.pcap");
     system("chmod 777 output.pcap");
-    system("sudo tshark -a duration:10 -i 1 -f \"udp\" -w output.pcap");
+    system("sudo tshark -a duration:5 -i 1 -f \"udp\" -w output.pcap");
 
-    command[300];  // Increase buffer size to accommodate the longer command
-    sleep(10);          // Delay for 10 seconds
+    strcpy(command, "");  // Increase buffer size to accommodate the longer command
+    sleep(5);             // Delay for 5 seconds
 
-    sprintf(command,
-            "sudo tshark -r output.pcap -T fields -E header=y -E separator=, -E quote=d "
-            "-e frame.number -e frame.time_epoch -e ip.src -e ip.dst -e udp.srcport -e udp.dstport -e data.data "
-            "-e rtcp.pt -e rtcp.ssrc.fraction > %s",
-            file_name);
+    char subcommand[150];
+    strcpy(subcommand, "sudo tshark -r output.pcap -T fields -E header=y -E separator=, -E quote=d ");
+    strcat(command, subcommand);
+    strcpy(subcommand, "-e frame.number -e frame.time_epoch -e ip.src -e ip.dst -e udp.srcport -e udp.dstport -e data.data ");
+    sprintf(subcommand, "-e rtcp.pt -e rtcp.ssrc.fraction > %s", file_name);
+    strcat(command, subcommand);
     // Concatenate the file_name directly within the sprintf command
-
     system(command);
 
     FILE* file = fopen(file_name, "rb");
@@ -93,9 +91,18 @@ int main() {
     printf("Sent ID: %s\n", id);
 
     int file_no = 1;
+
     while (1) {
         // Send file to server
+        char file_str[15] = "";
+        sprintf(file_str, "%d", file_no);
+        if (send(clientSocket, &file_str, sizeof(file_str), 0) < 0) {
+            perror("Sending error");
+            exit(1);
+        }
+        printf("Sending File #%s...\n", file_str);
         sendFile(file_no++, clientSocket);
+        printf("File #%d Sent.\n", file_no);
         sleep(INTERVAL);
     }
 

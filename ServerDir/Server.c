@@ -5,26 +5,47 @@
 #include <arpa/inet.h>
 
 #define PORT 8080
-#define FILENAME "received_data.csv"
-#define INTERVAL 5 // in seconds
+#define FILENAME_LENGTH 100
 
-void saveFile(char* data, int length) {
-    FILE* file = fopen(FILENAME, "wb");
+void saveFile(int file_no, int socket) {
+    printf("Saving file #%d start.", file_no);
+    char file_name[FILENAME_LENGTH];
+    sprintf(file_name, "received_%d.csv", file_no);
+
+    FILE* file = fopen(file_name, "wb");
     if (file == NULL) {
         perror("File error");
         exit(1);
     }
 
-    fwrite(data, sizeof(char), length, file);
+    long file_size;
+    if (recv(socket, &file_size, sizeof(file_size), 0) < 0) {
+        perror("Receiving error");
+        exit(1);
+    }
+
+    char buffer[1024];
+    long bytesReceived = 0;
+    while (bytesReceived < file_size) {
+        int bytesRead = recv(socket, buffer, sizeof(buffer), 0);
+        if (bytesRead < 0) {
+            perror("Receiving error");
+            exit(1);
+        }
+        fwrite(buffer, sizeof(char), bytesRead, file);
+        bytesReceived += bytesRead;
+    }
+
     fclose(file);
-    printf("File saved successfully.\n");
+    printf("File '%s' received and saved successfully.\n", file_name);
 }
 
 int main() {
+    printf("Program Starting...\n");
+
     int serverSocket, newSocket;
     struct sockaddr_in serverAddr, newAddr;
     socklen_t addrSize;
-    char buffer[1024];
 
     // Creating Server Socket
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -42,6 +63,8 @@ int main() {
         perror("Binding error");
         exit(1);
     }
+
+    printf("Program Successfully Started\n");
 
     // Listening for incoming connections
     if (listen(serverSocket, 10) < 0) {
@@ -61,29 +84,24 @@ int main() {
         printf("Connection accepted from %s:%d\n", inet_ntoa(newAddr.sin_addr), ntohs(newAddr.sin_port));
 
         // Receive ID from client
-        memset(buffer, 0, sizeof(buffer));
         char id[15] = "";
-        int idLength = recv(newSocket, &id, sizeof(id), 0);
-        if (idLength < 0) {
+        if (recv(newSocket, id, sizeof(id), 0) < 0) {
             perror("Receiving error");
             exit(1);
         }
         printf("Received ID: %s\n", id);
 
-        // Receive file from client
-        memset(buffer, 0, sizeof(buffer));
-        int fileLength = recv(newSocket, buffer, sizeof(buffer), 0);
-        if (fileLength < 0) {
+        char file_no[15] = "";
+        if (recv(newSocket, file_no, sizeof(file_no), 0) < 0) {
             perror("Receiving error");
             exit(1);
+        } else {
+            printf("File $%s received.", file_no);
         }
-        printf("Received file data.\n");
-
-        // Save file
-        saveFile(buffer, fileLength);
+        // Receive file from client
+        saveFile((int)file_no, newSocket);
 
         close(newSocket);
-        sleep(INTERVAL);
     }
 
     close(serverSocket);
