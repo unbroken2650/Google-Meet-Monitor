@@ -12,7 +12,7 @@ void sendFile(int file_no, int socket) {
     char file_name[FILENAME_LENGTH];
     sprintf(file_name, "%d.csv", file_no);
 
-    char command[100] = "";
+    char command[500] = "";
     sprintf(command, "touch %s", file_name);
     system(command);
 
@@ -23,13 +23,14 @@ void sendFile(int file_no, int socket) {
     system("chmod 777 output.pcap");
     system("sudo tshark -a duration:5 -i 1 -f \"udp\" -w output.pcap");
 
-    strcpy(command, "");  // Increase buffer size to accommodate the longer command
+    strcpy(command, "");  // command set to ""
     sleep(5);             // Delay for 5 seconds
 
-    char subcommand[150];
+    char subcommand[300];
     strcpy(subcommand, "sudo tshark -r output.pcap -T fields -E header=y -E separator=, -E quote=d ");
     strcat(command, subcommand);
     strcpy(subcommand, "-e frame.number -e frame.time_epoch -e ip.src -e ip.dst -e udp.srcport -e udp.dstport -e data.data ");
+    strcat(command, subcommand);
     sprintf(subcommand, "-e rtcp.pt -e rtcp.ssrc.fraction > %s", file_name);
     strcat(command, subcommand);
     // Concatenate the file_name directly within the sprintf command
@@ -94,13 +95,11 @@ int main() {
 
     while (1) {
         // Send file to server
-        char file_str[15] = "";
-        sprintf(file_str, "%d", file_no);
-        if (send(clientSocket, &file_str, sizeof(file_str), 0) < 0) {
+        if (send(clientSocket, &file_no, sizeof(file_no), 0) < 0) {
             perror("Sending error");
             exit(1);
         }
-        printf("Sending File #%s...\n", file_str);
+        printf("Sending File #%d...\n", file_no);
         sendFile(file_no++, clientSocket);
         printf("File #%d Sent.\n", file_no);
         sleep(INTERVAL);

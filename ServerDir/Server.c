@@ -8,7 +8,7 @@
 #define FILENAME_LENGTH 100
 
 void saveFile(int file_no, int socket) {
-    printf("Saving file #%d start.", file_no);
+    printf("Saving file #%d start.\n", file_no);
     char file_name[FILENAME_LENGTH];
     sprintf(file_name, "received_%d.csv", file_no);
 
@@ -18,22 +18,13 @@ void saveFile(int file_no, int socket) {
         exit(1);
     }
 
-    long file_size;
-    if (recv(socket, &file_size, sizeof(file_size), 0) < 0) {
-        perror("Receiving error");
-        exit(1);
-    }
-
     char buffer[1024];
-    long bytesReceived = 0;
-    while (bytesReceived < file_size) {
-        int bytesRead = recv(socket, buffer, sizeof(buffer), 0);
+    int bytesRead = 0;
+    while ((bytesRead = recv(socket, buffer, sizeof(buffer), 0)) > 0) {
         if (bytesRead < 0) {
             perror("Receiving error");
-            exit(1);
         }
         fwrite(buffer, sizeof(char), bytesRead, file);
-        bytesReceived += bytesRead;
     }
 
     fclose(file);
@@ -91,15 +82,14 @@ int main() {
         }
         printf("Received ID: %s\n", id);
 
-        char file_no[15] = "";
-        if (recv(newSocket, file_no, sizeof(file_no), 0) < 0) {
+        int file_no;
+        if (recv(newSocket, &file_no, sizeof(file_no), 0) < 0) {
             perror("Receiving error");
             exit(1);
-        } else {
-            printf("File $%s received.", file_no);
         }
+        printf("File #%d received.\n", file_no);
         // Receive file from client
-        saveFile((int)file_no, newSocket);
+        saveFile(file_no, newSocket);
 
         close(newSocket);
     }
