@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #define PORT 8080
-#define INTERVAL 5  // in seconds
+#define INTERVAL 10  // in seconds
 
 void sendFile(int file_no, int socket) {
     char file_str[15];
@@ -17,8 +17,25 @@ void sendFile(int file_no, int socket) {
     char command[100];
     sprintf(command, "touch %s", file_name);
     system(command);
-    
-    //Packet Capture
+
+    // Packet Capture
+    printf("Capturing Packets...\n");
+
+    system("touch output.pcap");
+    system("chmod 777 output.pcap");
+    system("sudo tshark -a duration:10 -i 1 -f \"udp\" -w output.pcap");
+
+    command[300];  // Increase buffer size to accommodate the longer command
+    sleep(10);          // Delay for 10 seconds
+
+    sprintf(command,
+            "sudo tshark -r output.pcap -T fields -E header=y -E separator=, -E quote=d "
+            "-e frame.number -e frame.time_epoch -e ip.src -e ip.dst -e udp.srcport -e udp.dstport -e data.data "
+            "-e rtcp.pt -e rtcp.ssrc.fraction > %s",
+            file_name);
+    // Concatenate the file_name directly within the sprintf command
+
+    system(command);
 
     FILE* file = fopen(file_name, "rb");
 
