@@ -26,29 +26,25 @@ int main() {
     socklen_t addrSize;
     char buffer[1024];
 
-    // Create server socket
+    // Creating Server Socket
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket < 0) {
         perror("Socket creation error");
         exit(1);
     }
-    printf("Server socket created.\n");
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT);
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    // Bind socket to IP/Port
+    // Binding socket to IP/Port
     if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
         perror("Binding error");
         exit(1);
     }
-    printf("Binding success.\n");
 
-    // Listen for incoming connections
-    if (listen(serverSocket, 10) == 0) {
-        printf("Listening....\n");
-    } else {
+    // Listening for incoming connections
+    if (listen(serverSocket, 10) < 0) {
         perror("Listening error");
         exit(1);
     }
@@ -66,13 +62,13 @@ int main() {
 
         // Receive ID from client
         memset(buffer, 0, sizeof(buffer));
-        int id = -1;
-        int idLength = recv(newSocket, &id, sizeof(int), 0);
+        char id[15] = "";
+        int idLength = recv(newSocket, &id, sizeof(id), 0);
         if (idLength < 0) {
             perror("Receiving error");
             exit(1);
         }
-        printf("Received ID: %d\n", id);
+        printf("Received ID: %s\n", id);
 
         // Receive file from client
         memset(buffer, 0, sizeof(buffer));
