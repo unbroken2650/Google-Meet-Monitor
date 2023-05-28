@@ -28,7 +28,6 @@ void saveFile(int file_no, long file_size, int socket) {
         fwrite(buffer, sizeof(char), bytesRead, file);
         memset(buffer, 0, sizeof(buffer));
         bytesReadTotal += bytesRead;
-        printf("%ld\n", bytesReadTotal);
         if (bytesReadTotal >= file_size) {
             break;
         }
@@ -89,11 +88,16 @@ int main() {
             exit(1);
         }
         printf("Received ID: %s\n", id);
+        int file_no;
+        int file_no_prev = file_no;
         while (1) {
             // Receive File Name from client
             int file_no;
             if (recv(newSocket, &file_no, sizeof(file_no), 0) < 0) {
                 perror("Receiving error");
+                exit(1);
+            }
+            if (file_no == file_no_prev) {
                 exit(1);
             }
             printf("File #%d received.\n", file_no);
@@ -106,6 +110,7 @@ int main() {
             printf("File Size : %ld\n", file_size);
             // Receive file from client
             saveFile(file_no, file_size, newSocket);
+            file_no_prev = file_no;
         }
 
         close(newSocket);
