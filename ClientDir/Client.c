@@ -1,3 +1,4 @@
+
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,6 +77,11 @@ void sendFile(int file_no, int socket) {
 
     fclose(file);
     printf("File sent successfully.\n");
+
+    // Visualization
+    char visualization_command[100];
+    sprintf(visualization_command, "python visualize_data.py %d.csv", file_no);
+    system(visualization_command);
 }
 
 int main() {
@@ -121,11 +127,13 @@ int main() {
             exit(1);
         }
         printf("Sending File #%d...\n", file_no);
-        sendFile(file_no++, clientSocket);
+        sendFile(file_no, clientSocket);
 
         printf("File #%d Sent.\n", file_no);
 
         sleep(INTERVAL);
+
+        file_no++;
     }
 
     close(clientSocket);
